@@ -10,14 +10,19 @@ import UIKit
 import AFNetworking
 import MBProgressHUD
 
-class MainViewController: UIViewController, UITableViewDataSource, UITableViewDelegate{
+class MainViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchBarDelegate{
     
     @IBOutlet weak var tableView: UITableView!
     var movieResults: [NSDictionary] = []
+    var originalMovieResults: [NSDictionary] = []
+   
     var endpoint: String!
+    var movieTitles: [String] = []
     
     @IBOutlet weak var erroImageView: UIImageView!
     @IBOutlet weak var NetworkErrorView: UIView!
+    
+    @IBOutlet weak var searchBarView: UISearchBar!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,6 +31,7 @@ class MainViewController: UIViewController, UITableViewDataSource, UITableViewDe
         
         tableView.delegate = self
         tableView.dataSource = self
+        searchBarView.delegate = self
         
         let refreshControl = UIRefreshControl()
         
@@ -56,8 +62,13 @@ class MainViewController: UIViewController, UITableViewDataSource, UITableViewDe
                         with: data, options:[]) as? NSDictionary {
                         // print("responseDictionary: \(responseDictionary)")
                         
-                        self.movieResults = responseDictionary["results"] as! [NSDictionary]
+                        self.originalMovieResults = responseDictionary["results"] as! [NSDictionary]
                         
+                        for movie in self.originalMovieResults {
+                            self.movieTitles.append(movie["title"] as! String)
+                        }
+                        self.movieResults = self.originalMovieResults
+                        print(self.movieTitles)
                         MBProgressHUD.hide(for: self.view, animated: true)
                         self.tableView.reloadData()
                     }
@@ -82,6 +93,8 @@ class MainViewController: UIViewController, UITableViewDataSource, UITableViewDe
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        
+        print("number of rows \(movieResults.count)")
         
         return movieResults.count
     }
@@ -127,4 +140,40 @@ class MainViewController: UIViewController, UITableViewDataSource, UITableViewDe
         
     }
     
+    func searchBar(_ searchBarView: UISearchBar, textDidChange searchText: String){
+       
+         var searchMovieResults: [NSDictionary] = []
+        
+        let filteredString = movieTitles.filter { (item: String) -> Bool in
+            let stringMatch = item.lowercased().range(of: searchText.lowercased())
+            //var stringMatch = item.lowercased().contains("m")
+            return stringMatch != nil ? true : false
+        }
+        print(filteredString)
+        
+        for movie in self.movieResults {
+            for title in filteredString {
+                if title.contains (movie["title"] as! String) && !searchMovieResults.contains(movie){
+                    searchMovieResults.append(movie)
+                }
+            }
+            
+        }
+        if (!searchText.isEmpty){
+             self.movieResults = searchMovieResults
+        } else{
+            self.movieResults = self.originalMovieResults // Load the original movie results if search bar is empty
+        }
+       
+        
+       self.tableView.reloadData()
+        
+       
+    }
+    
+    
+    
+    func searchBarCancelButtonClicked(searchBarView: UISearchBar) {
+        print("I got executed")
+    }
 }
